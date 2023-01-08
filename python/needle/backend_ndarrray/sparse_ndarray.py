@@ -61,7 +61,7 @@ class SparseNDArray:
         array.device.from_numpy(np.ascontiguousarray(values), np.ascontiguousarray(locations), array._handle)
         self._init(array)
     
-    def _init(self, other: SparseNDArray):
+    def _init(self, other):
         self._shape = other._shape
         self._nnz = other._nnz
         self._handle = other._handle
