@@ -35,16 +35,21 @@ target_link_libraries(ndarray_backend_cpu PUBLIC ${LINKER_LIBS})
 pybind11_extension(ndarray_backend_cpu)
 pybind11_strip(ndarray_backend_cpu)
 
+add_library(sparse_ndarray_backend_cpu MODULE src/sparse_ndarray_backend_cpu.cc)
+target_link_libraries(sparse_ndarray_backend_cpu PUBLIC ${LINKER_LIBS})
+pybind11_extension(sparse_ndarray_backend_cpu)
+pybind11_strip(sparse_ndarray_backend_cpu)
+
 
 # directly output to ffi folder
-set_target_properties(ndarray_backend_cpu
+set_target_properties(ndarray_backend_cpu sparse_ndarray_backend_cpu
   PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python/needle/backend_ndarray
   CXX_VISIBILITY_PRESET "hidden"
 )
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set_property(TARGET ndarray_backend_cpu PROPERTY LINK_OPTIONS -undefined dynamic_lookup)
+  set_property(TARGET ndarray_backend_cpu sparse_ndarray_backend_cpu PROPERTY LINK_OPTIONS -undefined dynamic_lookup)
 endif()
 
 
