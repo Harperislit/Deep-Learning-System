@@ -279,6 +279,7 @@ class SparseNDArray:
         return 1 - (self > other)
 
     ### Elementwise functions
+
     def tanh(self):
         out = SparseNDArray.make(self.shape, self.nnz, device=self.device)
         self.device.ewise_tanh(self._handle, out._handle)
