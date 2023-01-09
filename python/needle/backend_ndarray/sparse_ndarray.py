@@ -157,9 +157,6 @@ class SparseNDArray:
                 "values=" + self.numpy_value().__str__() + \
                 f", device={self.device})"
 
-    def __str__(self):
-        raise NotImplementedError()
-
     def numpy_value(self):
         return self.device.to_numpy_value(self._handle)
 
@@ -187,18 +184,8 @@ class SparseNDArray:
             raise NotImplementedError()
         return NDArray(dense_array, device=device)
 
-    def reshape(self, new_shape):
-        raise NotImplementedError()
-
-    def permute(self, new_axes):
-        raise NotImplementedError()
-    
     def broadcast_to(self, new_shape):
         raise NotImplementedError()
-
-    @property
-    def flat(self):
-        return self.reshape((self.size,))
 
     def __getitem__(self, idxs):
         ### may be not used
@@ -207,6 +194,7 @@ class SparseNDArray:
     def __setitem__(self, idxs, other):
         ### may be not used
         raise NotImplementedError() 
+
 
     ### Collection of elementwise and scalar function: add, multiply, boolean, etc
     def ewise_or_scalar(self, other, ewise_func, scalar_func):
@@ -255,28 +243,23 @@ class SparseNDArray:
 
     def __truediv__(self, other):
         return self.ewise_or_scalar(
-            other, self.device.ewise_div, self.device.scalar_div
+            other, self.device.scalar_div, self.device.scalar_div
         )
 
     def __neg__(self):
         return self * (-1)
 
     def __pow__(self, other):
-        out = SparseNDArray.make(self.shape, device=self.device)
+        out = SparseNDArray.make(self.shape, self.nnz, device=self.device)
         self.device.scalar_power(self._handle, other, out._handle)
         return out
 
     def maximum(self, other):
         return self.ewise_or_scalar(
-            other, self.device.ewise_maximum, self.device.scalar_maximum
+            other, self.device.ewise_maximum, self.device.ewise_maximum
         )
 
     ### Binary operators all return (0.0, 1.0) floating point values, could of course be optimized
-    def __eq__(self, other):
-        return self.ewise_or_scalar(other, self.device.ewise_eq, self.device.scalar_eq)
-
-    def __ge__(self, other):
-        return self.ewise_or_scalar(other, self.device.ewise_ge, self.device.scalar_ge)
 
     def __ne__(self, other):
         return 1 - (self == other)
@@ -291,18 +274,8 @@ class SparseNDArray:
         return 1 - (self > other)
 
     ### Elementwise functions
-    def log(self):
-        out = SparseNDArray.make(self.shape, device=self.device)
-        self.device.ewise_log(self._handle, out._handle)
-        return out
-
-    def exp(self):
-        out = SparseNDArray.make(self.shape, device=self.device)
-        self.device.ewise_exp(self._handle, out._handle)
-        return out
-
     def tanh(self):
-        out = SparseNDArray.make(self.shape, device=self.device)
+        out = SparseNDArray.make(self.shape, self.nnz, device=self.device)
         self.device.ewise_tanh(self._handle, out._handle)
         return out
 
