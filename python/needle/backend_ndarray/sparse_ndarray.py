@@ -184,6 +184,12 @@ class SparseNDArray:
             raise NotImplementedError()
         return NDArray(dense_array, device=device)
 
+    def reshape(self, new_shape):
+        raise NotImplementedError()
+
+    def permute(self, new_axes):
+        raise NotImplementedError()
+    
     def broadcast_to(self, new_shape):
         raise NotImplementedError()
 
@@ -209,7 +215,6 @@ class SparseNDArray:
             other_1d_locations = other.numpy_1d_location()
             if ewise_func == self.device.ewise_mul:
                 all_1d_locations = list(set(this_1d_locations).intersection(set(other_1d_locations)))
-                print(all_1d_locations)
             else:
                 all_1d_locations = list(set(this_1d_locations).union(set(other_1d_locations)))
             ewise_nnz = len(all_1d_locations) 
@@ -295,4 +300,3 @@ class SparseNDArray:
 
     def max(self, axis=None, keepdims=False):
         raise NotImplementedError() 
-
