@@ -56,16 +56,55 @@ def all_devices():
 
 class SparseNDArray:
     def __init__(self, locations: np.ndarray, values: np.ndarray, shape, device = None):
+        
+        self._ndim = len(shape)
+
         device = device if device is not None else default_device()
         array = self.make(shape, len(values), device=device)
-        array.device.from_numpy(np.ascontiguousarray(values), np.ascontiguousarray(locations), array._handle)
+        array.device.from_numpy(np.ascontiguousarray(values), 
+                                np.ascontiguousarray(SparseNDArray.convert_loc_to_1d(shape, locations)),
+                                array._handle)
         self._init(array)
+        
     
     def _init(self, other):
         self._shape = other._shape
         self._nnz = other._nnz
         self._handle = other._handle
         self._device = other._device     
+    
+    @staticmethod
+    def compact_strides(shape):
+        """ Utility function to compute compact strides """
+        stride = 1
+        res = []
+        for i in range(1, len(shape) + 1):
+            res.append(stride)
+            stride *= shape[-i]
+        return tuple(res[::-1])
+
+    @staticmethod        
+    def convert_loc_to_1d(shape, locations):
+        """ Utility function to convert locations from (ndim, nnz) to 1d array
+            recording the location of non-zero values in a flattened array.
+        """
+        strides = SparseNDArray.compact_strides(shape)
+        return strides@locations
+
+    @staticmethod        
+    def convert_1d_to_loc(shape, loc_1d):
+        """ Inverse operation of the above
+        """
+        strides = SparseNDArray.compact_strides(shape)
+        locations = np.zeros((len(shape), len(loc_1d)))
+        for icol, loc in enumerate(loc_1d):
+            locs = []
+            for s in strides:
+                locs.append(loc // s)
+                loc = loc % s
+            locations[:, icol] = locs
+        return locations
+
 
     @staticmethod
     def make(shape, nnz, handle = None, device = None):
@@ -75,6 +114,7 @@ class SparseNDArray:
       array = SparseNDArray.__new__(SparseNDArray)
       array._shape = tuple(shape)
       array._nnz = nnz
+      array._device = device if device is not None else default_device()
       if handle is None:
           array._handle = array.device.Array(nnz)
       else:
@@ -107,15 +147,26 @@ class SparseNDArray:
 
     @property
     def nnz(self):
-        return prod(self._shape)
+        return self._nnz
 
     def __repr__(self):
         ### display in COO format
         ### use to_numpy_value and to_numpy_loc
-        raise NotImplementedError()
+        return "NDArray(locations=" + self.numpy_location().__str__() + "\n" + \
+                "values=" + self.numpy_value().__str__() + \
+                f", device={self.device})"
 
     def __str__(self):
         raise NotImplementedError()
+
+    def numpy_value(self):
+        return self.device.to_numpy_value(self._handle)
+
+    def numpy_1d_location(self):
+        return self.device.to_numpy_loc(self._handle)
+
+    def numpy_location(self):
+        return SparseNDArray.convert_1d_to_loc(self._shape, self.numpy_1d_location())
 
     ### Basic array manipulation
     def to_dense(self):
@@ -148,12 +199,24 @@ class SparseNDArray:
     def ewise_or_scalar(self, other, ewise_func, scalar_func):
         """Run either an elementwise or scalar version of a function,
         depending on whether "other" is a SparseNDArray or scalar
+        
+        Note: we assume these operations will NOT create new non-zero entries other 
+        than those already in either self or other.
         """
-        out = SparseNDArray.make(self.shape, device=self.device)
         if isinstance(other, SparseNDArray):
+            this_1d_locations = self.numpy_1d_location()
+            other_1d_locations = other.numpy_1d_location()
+            if ewise_func == self.device.ewise_mul:
+                all_1d_locations = list(set(this_1d_locations).intersection(set(other_1d_locations)))
+                print(all_1d_locations)
+            else:
+                all_1d_locations = list(set(this_1d_locations).union(set(other_1d_locations)))
+            ewise_nnz = len(all_1d_locations) 
+            out = SparseNDArray.make(self.shape, ewise_nnz, device=self.device)
             assert self.shape == other.shape, "operation needs two equal-sized arrays"
             ewise_func(self._handle, other._handle, out._handle)
         else:
+            out = SparseNDArray.make(self.shape, self.nnz, device=self.device)
             scalar_func(self._handle, other, out._handle)
         return out
 
