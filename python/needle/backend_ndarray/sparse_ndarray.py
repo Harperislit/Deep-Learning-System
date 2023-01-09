@@ -4,6 +4,7 @@ from functools import reduce
 import numpy as np
 from . import NDArray
 from . import sparse_ndarray_backend_cpu
+from . import ndarray
 
 
 # math.prod not in Python 3.7
@@ -170,9 +171,22 @@ class SparseNDArray:
 
     ### Basic array manipulation
     def to_dense(self):
-        out = NDArray.make(self.shape, device=self.device)
         ### Use some low-level functions to convert the sparse array to a dense array and assign it to "out"
-        raise NotImplementedError()
+        dense_array = np.zeros(self.shape)
+
+        nz_values = self.numpy_value()
+        nz_locations = self.numpy_location()
+        
+        for i in range(len(nz_values)):
+            idx = tuple(nz_locations[:,i].astype(int))            
+            dense_array[idx] = nz_values[i]
+        print(type(dense_array), dense_array)
+
+        if self.device.name == 'cpu':
+            device = ndarray.cpu()
+        else:
+            raise NotImplementedError()
+        return NDArray(dense_array, device=device)
 
     def reshape(self, new_shape):
         raise NotImplementedError()
