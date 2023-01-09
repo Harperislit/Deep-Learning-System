@@ -153,7 +153,7 @@ class SparseNDArray:
     def __repr__(self):
         ### display in COO format
         ### use to_numpy_value and to_numpy_loc
-        return "NDArray(locations=" + self.numpy_location().__str__() + "\n" + \
+        return "SparseNDArray(locations=" + self.numpy_location().__str__() + "\n" + \
                 "values=" + self.numpy_value().__str__() + \
                 f", device={self.device})"
 
@@ -180,7 +180,6 @@ class SparseNDArray:
         for i in range(len(nz_values)):
             idx = tuple(nz_locations[:,i].astype(int))            
             dense_array[idx] = nz_values[i]
-        print(type(dense_array), dense_array)
 
         if self.device.name == 'cpu':
             device = ndarray.cpu()
