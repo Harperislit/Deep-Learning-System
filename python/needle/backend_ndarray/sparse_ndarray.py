@@ -206,7 +206,11 @@ class SparseNDArray:
         if isinstance(other, SparseNDArray):
             this_1d_locations = self.numpy_1d_location()
             other_1d_locations = other.numpy_1d_location()
-            all_1d_locations = list(set(this_1d_locations).union(set(other_1d_locations)))
+            if ewise_func == self.device.ewise_mul:
+                all_1d_locations = list(set(this_1d_locations).intersection(set(other_1d_locations)))
+                print(all_1d_locations)
+            else:
+                all_1d_locations = list(set(this_1d_locations).union(set(other_1d_locations)))
             ewise_nnz = len(all_1d_locations) 
             out = SparseNDArray.make(self.shape, ewise_nnz, device=self.device)
             assert self.shape == other.shape, "operation needs two equal-sized arrays"
