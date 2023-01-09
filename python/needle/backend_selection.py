@@ -17,6 +17,7 @@ if BACKEND == "nd":
     )
 
     NDArray = array_api.NDArray
+    SparseNDArray = array_api.SparseNDArray
 elif BACKEND == "np":
     import numpy as array_api
     from .backend_numpy import all_devices, cpu, default_device, Device
