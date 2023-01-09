@@ -263,7 +263,7 @@ class SparseNDArray:
         return self * (-1)
 
     def __pow__(self, other):
-        out = SparseNDArray.make(self.shape, device=self.device)
+        out = SparseNDArray.make(self.shape, self.nnz, device=self.device)
         self.device.scalar_power(self._handle, other, out._handle)
         return out
 
@@ -293,17 +293,17 @@ class SparseNDArray:
 
     ### Elementwise functions
     def log(self):
-        out = SparseNDArray.make(self.shape, device=self.device)
+        out = SparseNDArray.make(self.shape, self.nnz, device=self.device)
         self.device.ewise_log(self._handle, out._handle)
         return out
 
     def exp(self):
-        out = SparseNDArray.make(self.shape, device=self.device)
+        out = SparseNDArray.make(self.shape, self.nnz, device=self.device)
         self.device.ewise_exp(self._handle, out._handle)
         return out
 
     def tanh(self):
-        out = SparseNDArray.make(self.shape, device=self.device)
+        out = SparseNDArray.make(self.shape, self.nnz, device=self.device)
         self.device.ewise_tanh(self._handle, out._handle)
         return out
 
