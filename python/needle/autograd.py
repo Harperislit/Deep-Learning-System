@@ -9,8 +9,7 @@ from needle import init
 LAZY_MODE = False
 TENSOR_COUNTER = 0
 
-from .backend_selection import Device, array_api, NDArray, default_device
-
+from .backend_selection import Device, array_api, NDArray, SparseNDArray, default_device
 
 class Op:
     """Operator definition."""
@@ -364,6 +363,136 @@ class Tensor(Value):
     __radd__ = __add__
     __rmul__ = __mul__
     __rmatmul__ = __matmul__
+
+
+class SparseTensor(Value):
+    def __init__(
+        self, 
+        locations, 
+        values, 
+        shape, 
+        *, 
+        device: Optional[Device] = None,
+        dtype="float32",
+        requires_grad=True,
+        **kwargs
+      ):
+      device = device if device else default_device()
+      cached_data = SparseNDArray(locations, values, shape, device = device)
+      self._init(
+        None,
+        [],
+        cached_data=cached_data,
+        requires_grad=requires_grad,
+      )
+
+    @staticmethod
+    def _array_from_numpy(numpy_array, device, dtype):
+        if array_api is numpy:
+            return numpy.array(numpy_array, dtype=dtype)
+        return array_api.array(numpy_array, device=device, dtype=dtype)
+
+    @staticmethod
+    def make_from_op(op: Op, inputs: List["Value"]):
+        tensor = SparseTensor.__new__(SparseTensor)
+        tensor._init(op, inputs)
+        if not LAZY_MODE:
+            if not tensor.requires_grad:
+                return tensor.detach()
+            tensor.realize_cached_data()
+        return tensor
+
+    @staticmethod
+    def make_const(data, requires_grad=False):
+        tensor = SparseTensor.__new__(SparseTensor)
+        tensor._init(
+            None,
+            [],
+            cached_data=data
+            if not isinstance(data, SparseTensor)
+            else data.realize_cached_data(),
+            requires_grad=requires_grad,
+        )
+        return tensor
+
+    @property
+    def data(self):
+        return self.detach()
+
+    @data.setter
+    def data(self, value):
+        assert isinstance(value, SparseTensor)
+        assert value.dtype == self.dtype, "%s %s" % (
+            value.dtype,
+            self.dtype,
+        )
+        self.cached_data = value.realize_cached_data()
+
+    def detach(self):
+        """Create a new tensor that shares the data but detaches from the graph."""
+        return SparseTensor.make_const(self.realize_cached_data())
+
+    @property
+    def shape(self):
+        return self.realize_cached_data().shape
+
+    @property
+    def dtype(self):
+        return self.realize_cached_data().dtype
+
+    @property
+    def device(self):
+        data = self.realize_cached_data()
+        if array_api is numpy:
+            return default_device()
+        return data.device
+
+    def backward(self, out_grad=None):
+        out_grad = (
+            out_grad
+            if out_grad
+            else init.ones(*self.shape, dtype=self.dtype, device=self.device)
+        )
+        compute_gradient_of_variables(self, out_grad)
+
+    def __repr__(self):
+        return "needle.SparseTensor(" + str(self.realize_cached_data()) + ")"
+
+    def __str__(self):
+        return self.realize_cached_data().__str__()
+
+    def __add__(self, other):
+        if isinstance(other, SparseTensor):
+            return needle.ops.EWiseAdd()(self, other)
+        else:
+            return needle.ops.AddScalar(other)(self)
+
+    def __mul__(self, other):
+        if isinstance(other, SparseTensor):
+            return needle.ops.EWiseMul()(self, other)
+        else:
+            return needle.ops.MulScalar(other)(self)
+
+    def __pow__(self, other):
+        ### BEGIN YOUR SOLUTION
+        return needle.ops.PowerScalar(other)(self)
+        ### END YOUR SOLUTION
+
+    def __sub__(self, other):
+        if isinstance(other, SparseTensor):
+            return needle.ops.EWiseAdd()(self, needle.ops.Negate()(other))
+        else:
+            return needle.ops.AddScalar(-other)(self)
+
+    def __truediv__(self, other):
+        if isinstance(other, SparseTensor):
+            return needle.ops.EWiseDiv()(self, other)
+        else:
+            return needle.ops.DivScalar(other)(self)
+
+    def __neg__(self):
+        return needle.ops.Negate()(self)
+
 
 
 def compute_gradient_of_variables(output_tensor, out_grad):
