@@ -283,7 +283,7 @@ PYBIND11_MODULE(sparse_ndarray_backend_cpu, m) {
   // convert from numpy (with copying)
   m.def("from_numpy", [](py::array_t<scalar_t> a_value, py::array_t<scalar_t> a_loc, AlignedArray* out) {
     std::memcpy(out->ptr_value, a_value.request().ptr, out->nnz * ELEM_SIZE);
-    std::memcpy(out->ptr_loc, a_loc.request().ptr, out->nnz * ELEM_SIZE);
+    std::memcpy(out->ptr_loc, a_loc.request().ptr, out->nnz * LOC_SIZE);
   });
 
   m.def("ewise_add", EwiseAdd);
