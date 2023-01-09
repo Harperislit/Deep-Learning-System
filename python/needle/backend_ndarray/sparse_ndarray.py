@@ -209,7 +209,6 @@ class SparseNDArray:
             other_1d_locations = other.numpy_1d_location()
             if ewise_func == self.device.ewise_mul:
                 all_1d_locations = list(set(this_1d_locations).intersection(set(other_1d_locations)))
-                print(all_1d_locations)
             else:
                 all_1d_locations = list(set(this_1d_locations).union(set(other_1d_locations)))
             ewise_nnz = len(all_1d_locations) 
