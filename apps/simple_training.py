@@ -203,3 +203,5 @@ if __name__ == "__main__":
     train_data = ndl.data.batchify(corpus.train, batch_size, device=device, dtype="float32")
     model = LanguageModel(1, len(corpus.dictionary), hidden_size, num_layers=2, device=device)
     train_ptb(model, train_data, seq_len, n_epochs=10, device=device)
+
+    
